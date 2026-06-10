@@ -4,6 +4,9 @@ import random
 from dotenv import load_dotenv
 import os
 load_dotenv()
+import google.generativeai as genai
+genai.configure(api_key=os.getenv("GEMINI_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash-8b")
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
@@ -22,7 +25,7 @@ async def on_message(message):
     if(message.content.lower() == "!hello"):
         await message.channel.send(random.choice(hello))
     elif(message.content.lower() == "!help"):
-        await message.channel.send("Here is a list of available commands:\n!hello - bot say hello,\n!jet - radnom gif with fighter jet,\n!funfact - random fun fact,\n!random [option1] [option2] - chooses one option,\n!roll [number] - rolls a random number between 1 and the given number,\n!quote - random quote,\n !weather - current weather in the given city,\n!coinflip - flips a coin")
+        await message.channel.send("Here is a list of available commands:\n!hello - bot say hello,\n!jet - radnom gif with fighter jet,\n!funfact - random fun fact,\n!random [option1] [option2] - chooses one option,\n!roll [number] - rolls a random number between 1 and the given number,\n!quote - random quote,\n !weather - current weather in the given city,\n!coinflip - flips a coin.\n!meme - random meme form reddit")
     elif(message.content.lower() == "!jet"):
         url = f"https://api.giphy.com/v1/gifs/random?api_key={os.getenv("GIPHY_TOKEN")}&tag=fighter-plane&rating=g"
         response = requests.get(url)
@@ -75,7 +78,20 @@ async def on_message(message):
     elif(message.content.lower() == "!coinflip"):
         choice = random.choice(coin)
         await message.channel.send(choice)
-    
+    elif(message.content.lower() == "!meme"):
+        url = f"https://meme-api.com/gimme/blackhumor"
+        response = requests.get(url)
+        data = response.json()
+        meme = data["url"]
+        await message.channel.send(meme)
+    elif(message.content.startswith("!ai")):
+        words = message.content.split()
+        prompt = " ".join(words[1:])
+        try:
+            response = model.generate_content(prompt)
+            await message.channel.send(response.text)
+        except Exception as e:
+            await message.channel.send("AI is currently unvailable, try again later!")
       
       
 client.run(os.getenv("DISCORD_TOKEN")) 
