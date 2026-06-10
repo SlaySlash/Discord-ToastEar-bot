@@ -39,7 +39,7 @@ async def on_message(message):
         words = message.content.split()
         options = words[1:]
         if len(options) < 2:
-            await message.channel.send("Nigga u have to write at least 2 options for instance !random GeorgeFloyd BenjaNetanyahoo")
+            await message.channel.send("You have to write at least 2 options for instance !random George John or !random red blue green")
         else:
             answer = random.choice(options)
             await message.channel.send(answer)
@@ -72,13 +72,10 @@ async def on_message(message):
             humidity = data["main"]["humidity"]
             w_city = data["name"]
             await message.channel.send(f"In the {w_city} is {description}. The temperature is {temp}°C and humidity is {humidity}%")
-
-
     elif(message.content.lower() == "!coinflip"):
         choice = random.choice(coin)
         await message.channel.send(choice)
-    elif "żyd" in message.content.lower():
-        await message.channel.send("Czy ktoś napisał żyd? Jebac zydow kurwa tfu")
+    
       
 
 
