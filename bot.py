@@ -77,15 +77,9 @@ async def on_message(message):
         await message.channel.send(choice)
     
       
-
-
-
-
-
-
-
+      
 client.run(os.getenv("DISCORD_TOKEN")) 
-print(os.getenv("DISCORD_TOKEN"))
+
 
 
 
