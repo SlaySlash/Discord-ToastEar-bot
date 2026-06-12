@@ -3,6 +3,7 @@ import requests
 import random
 from dotenv import load_dotenv
 import os
+import yt_dlp
 load_dotenv()
 import google.generativeai as genai
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
@@ -13,6 +14,7 @@ client = discord.Client(intents=intents)
 tree = discord.app_commands.CommandTree(client)
 hello = ["Howdy!", "Hello!", "Ahoj!", "What's poppin!", "What's crackin'!", "Wazzup!", "Hey!", "Yahoo!"]
 coin = ["Head", "Tail"]
+queue = []
 
 @client.event 
 async def on_ready():
@@ -25,7 +27,7 @@ async def on_message(message):
     if(message.content.lower() == "!hello"):
         await message.channel.send(random.choice(hello))
     elif(message.content.lower() == "!help"):
-        await message.channel.send("Here is a list of available commands:\n!hello - bot say hello,\n!jet - radnom gif with fighter jet,\n!funfact - random fun fact,\n!random [option1] [option2] - chooses one option,\n!roll [number] - rolls a random number between 1 and the given number,\n!quote - random quote,\n !weather - current weather in the given city,\n!coinflip - flips a coin.\n!meme - random meme form reddit")
+        await message.channel.send("Here is a list of available commands:\n!hello - bot say hello,\n!jet - radnom gif with fighter jet,\n!funfact - random fun fact,\n!random [option1] [option2] - chooses one option,\n!roll [number] - rolls a random number between 1 and the given number,\n!quote - random quote,\n!weather - current weather in the given city,\n!coinflip - flips a coin.\n!meme - random meme form reddit,\n!ai [prompt] - ask AI about anything you want, \n!join - bot joins your voice channel,\n!play [link] - bot plays music from youtube link,\n!stop - bot stops the music,\n!resume - bot resumes the music,\n!pause - bot pauses the music,\n!leave - bot leaves the voice channel.")
     elif(message.content.lower() == "!jet"):
         url = f"https://api.giphy.com/v1/gifs/random?api_key={os.getenv("GIPHY_TOKEN")}&tag=fighter-plane&rating=g"
         response = requests.get(url)
@@ -64,7 +66,7 @@ async def on_message(message):
     elif(message.content.startswith("!weather")):
         words = message.content.split()
         if len(words) != 2:
-            await message.channel.send("You have to write one city like !weather Warsaw not !weather Warsaw Krakow or just !weather")
+            await message.channel.send("You have to write one city like !weather London not !weather London Moscow or just !weather")
         else:
             city = words[1]
             url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&APPID={os.getenv("WEATHER_KEY")}&units=metric"
@@ -78,6 +80,8 @@ async def on_message(message):
     elif(message.content.lower() == "!coinflip"):
         choice = random.choice(coin)
         await message.channel.send(choice)
+    if "bread" in message.content.lower():
+        await message.channel.send("I am a bread!")
     elif(message.content.lower() == "!meme"):
         url = f"https://meme-api.com/gimme/blackhumor"
         response = requests.get(url)
@@ -92,7 +96,40 @@ async def on_message(message):
             await message.channel.send(response.text)
         except Exception as e:
             await message.channel.send("AI is currently unvailable, try again later!")
-      
+    elif(message.content.lower() == "!join"):
+        channel = message.author.voice.channel
+        await channel.connect()
+        if message.guild.voice_client is None:
+                await channel.connect()
+    elif(message.content.startswith("!play")):
+        ydl_opts = {'format': 'bestaudio'}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            channel = message.author.voice.channel
+            if message.guild.voice_client is None:
+                await channel.connect()
+            words = message.content.split()
+            link = words[1]
+            info = ydl.extract_info(link, download=False)
+            audio_url = info['url']
+            voice_client = message.guild.voice_client
+            if voice_client.is_playing():
+                queue.append(link)
+                await message.channel.send("Added to queue but doesn't exist yet:3 !")
+            else:
+                voice_client.play(discord.FFmpegPCMAudio(audio_url))
+    elif(message.content.lower() == "!stop"):
+        voice_client = message.guild.voice_client 
+        await voice_client.stop()
+    elif(message.content.lower() == "!resume"):
+        voice_client = message.guild.voice_client 
+        await voice_client.resume()
+    elif(message.content.lower() == "!pause"):
+        voice_client = message.guild.voice_client
+        await voice_client.pause()
+    elif(message.content.lower() == "!leave"):
+        voice_client = message.guild.voice_client
+        await voice_client.disconnect()
+    
       
 client.run(os.getenv("DISCORD_TOKEN")) 
 
