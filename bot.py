@@ -4,6 +4,7 @@ import random
 from dotenv import load_dotenv
 import os
 import yt_dlp
+from datetime import timedelta
 load_dotenv()
 import google.generativeai as genai
 genai.configure(api_key=os.getenv("GEMINI_KEY"))
@@ -27,9 +28,15 @@ async def on_message(message):
     if(message.content.lower() == "!hello"):
         await message.channel.send(random.choice(hello))
     elif(message.content.lower() == "!help"):
-        await message.channel.send("Here is a list of available commands:\n!hello - bot say hello,\n!jet - radnom gif with fighter jet,\n!funfact - random fun fact,\n!random [option1] [option2] - chooses one option,\n!roll [number] - rolls a random number between 1 and the given number,\n!quote - random quote,\n!weather - current weather in the given city,\n!coinflip - flips a coin.\n!meme - random meme form reddit,\n!ai [prompt] - ask AI about anything you want, \n!join - bot joins your voice channel,\n!play [link] - bot plays music from youtube link,\n!stop - bot stops the music,\n!resume - bot resumes the music,\n!pause - bot pauses the music,\n!leave - bot leaves the voice channel.")
+        await message.channel.send("Here is a list of available commands:\n!hello - bot say hello,\n!jet - radnom gif with fighter jet,\n!funfact - random fun fact,\n!random [option1] [option2] - chooses one option,\n!roll [number] - rolls a random number between 1 and the given number,\n!quote - random quote,\n!weather - current weather in the given city,\n!coinflip - flips a coin.\n!meme - random meme form reddit,\n!ai [prompt] - ask AI about anything you want, \n!join - bot joins your voice channel,\n!play [link] - bot plays music from youtube link,\n!stop - bot stops the music,\n!resume - bot resumes the music,\n!pause - bot pauses the music,\n!leave - bot leaves the voice channel,\n!kick [@user] - kicks the mentioned user,\n!ban [@user] - bans the mentioned user,\n!timeout [@user] [time in minutes] - timeouts the mentioned user for given time,\n!untimeout [@user] - removes timeout from the mentioned user,\n!mute [@user] - mutes the mentioned user,\n!unmute [@user] - unmutes the mentioned user,\n!clear [number] - deletes given number of messages,\n!poll [question] - creates a poll with given question.")
     elif(message.content.lower() == "!jet"):
         url = f"https://api.giphy.com/v1/gifs/random?api_key={os.getenv("GIPHY_TOKEN")}&tag=fighter-plane&rating=g"
+        response = requests.get(url)
+        data = response.json()
+        gif_url = data["data"]["images"]["original"]["url"]
+        await message.channel.send(gif_url)
+    if "67" in message.content:
+        url = f"https://api.giphy.com/v1/gifs/random?api_key={os.getenv("GIPHY_TOKEN")}&tag=67&rating=g"
         response = requests.get(url)
         data = response.json()
         gif_url = data["data"]["images"]["original"]["url"]
@@ -102,21 +109,28 @@ async def on_message(message):
         if message.guild.voice_client is None:
                 await channel.connect()
     elif(message.content.startswith("!play")):
-        ydl_opts = {'format': 'bestaudio'}
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            channel = message.author.voice.channel
-            if message.guild.voice_client is None:
-                await channel.connect()
-            words = message.content.split()
-            link = words[1]
-            info = ydl.extract_info(link, download=False)
-            audio_url = info['url']
-            voice_client = message.guild.voice_client
-            if voice_client.is_playing():
-                queue.append(link)
-                await message.channel.send("Added to queue but doesn't exist yet:3 !")
-            else:
-                voice_client.play(discord.FFmpegPCMAudio(audio_url))
+        if message.author.voice is None:
+            await message.channel.send("You need to be in a voice channel!")
+        else:
+            ydl_opts = {'format': 'bestaudio'}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                words = message.content.split()
+                link = words[1]
+                info = ydl.extract_info(link, download=False)
+                audio_url = info['url']
+            try:
+                channel = message.author.voice.channel
+                if message.guild.voice_client is None:
+                    await channel.connect()
+                voice_client = message.guild.voice_client
+                if voice_client.is_playing():
+                    queue.append(link)
+                    await message.channel.send("Added to queue but queue doesn't exist yet:3 !")
+                else:
+                    voice_client.play(discord.FFmpegPCMAudio(audio_url))
+                    await message.channel.send(f"Now playing: {info['title']}")
+            except Exception as e:
+                await message.channel.send("An error occurred while trying to play the audio.")
     elif(message.content.lower() == "!stop"):
         voice_client = message.guild.voice_client 
         await voice_client.stop()
@@ -129,7 +143,90 @@ async def on_message(message):
     elif(message.content.lower() == "!leave"):
         voice_client = message.guild.voice_client
         await voice_client.disconnect()
-    
+    elif(message.content.startswith("!kick")):
+        if len(message.mentions) == 0:
+            await message.channel.send("You have to mention a user like: !kick @user")
+        else:
+            member = message.mentions[0]
+            try:
+                await member.kick()
+                await message.channel.send(f"{member.mention} has been kicked.")
+            except Exception as e:
+                await message.channel.send("An error occured while trying to kick the user.")
+    elif(message.content.startswith("!ban")):
+        if len(message.mentions) == 0:
+            await message.channel.send("You have to mention a user like: !ban @user")
+        else:
+            member = message.mentions[0]
+            try:
+                await member.ban()
+                await message.channel.send(f"{member.mention} has been banned.")
+            except Exception as e:
+                await message.channel.send("An error occured while trying to ban the user.")
+    elif(message.content.startswith("!timeout")):
+        words = message.content.split()
+        if len(message.mentions) == 0:
+            await message.channel.send("You have to mention a user to timeout like: !timeout @user 10")
+        elif len(words) < 3:
+            await message.channel.send("You have to write how much minutes to time out user like: !timeout @user 10")
+        else:
+            member = message.mentions[0]
+            time = int(words[2])
+            try:
+                await member.timeout(timedelta(minutes=time))
+                await message.channel.send(f"{member.mention} has been timed out for {time} minutes.")
+            except Exception as e:
+                await message.channel.send("An error occured while trying to timeout the user.")
+    elif(message.content.startswith("!untimeout")):
+        if len(message.mentions) == 0:
+            await message.channel.send("You have to mention a user to remove timeout like: !untimeout @user")
+        else:
+            member = message.mentions[0]
+            try:
+                await member.timeout(None)
+                await message.channel.send(f"Timeout removed from {member.mention}.")
+            except Exception as e:
+                await message.channel.send("An error occured while trying to remove timeout from the user.")    
+    elif(message.content.startswith("!mute")):
+        if len(message.mentions) == 0:
+            await message.channel.send("You have to mention a user to mute like: !mute @user")
+        else:
+            member = message.mentions[0]
+            try:
+                await member.edit(mute=True)
+                await message.channel.send(f"{member.mention} has been muted.")
+            except Exception as e:
+                await message.channel.send("An error occured while trying to mute the user.")
+    elif(message.content.startswith("!unmute")):
+        if len(message.mentions) == 0:
+            await message.channel.send("You have to mention a user to unmute like: !unmute @user")
+        else:
+            member = message.mentions[0]
+            try:
+                await member.edit(mute=False)
+                await message.channel.send(f"{member.mention} has been unmuted.")
+            except Exception as e:
+                await message.channel.send("An error occured while trying to unmute the user.")      
+    elif(message.content.startswith("!clear")):
+        words = message.content.split()
+        if len(words) != 2:
+            await message.channel.send("You have to write how many messages you want to delete like: !clear 10")
+        else:
+            amount = int(words[1])
+            try:
+                await message.channel.purge(limit=amount)
+            except Exception as e:
+                await message.channel.send("An error occured while trying to delete messages.")
+    elif(message.content.startswith("!poll")):
+        words = message.content.split()
+        if len(words) < 2:
+            await message.channel.send("You have to ask a question in your pool.")
+        else:
+            question = " ".join(words[1:])
+            sent_message = await message.channel.send(question)
+            await sent_message.add_reaction("👍")
+            await sent_message.add_reaction("👎")
+
       
 client.run(os.getenv("DISCORD_TOKEN")) 
 
